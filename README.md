@@ -106,18 +106,15 @@ npm run client
 
 **API Security:**
 - **No storage**: API keys are never persisted or logged
-- **Request validation**: All endpoints validate required parameters
 - **Rate limiting awareness**: Implemented delays and request optimization
 
 **Dynamic Schema Handling:**
 - **Runtime discovery**: Schemas fetched fresh for each actor selection
-- **Type safety**: Form inputs validated against schema types
 - **Graceful degradation**: Application works even when schemas are unavailable
 
 **Execution Management:**
 - **Intelligent polling**: 5-second intervals with 3-minute timeout
 - **Status tracking**: Real-time updates from Apify's execution status
-- **Cleanup handling**: Proper resource cleanup and error boundaries
 
 ### **3. Code Quality Standards**
 
@@ -146,8 +143,7 @@ npm run client
 
 - **Asset optimization**: CSS-only animations, no heavy libraries
 - **Connection pooling**: Efficient HTTP client configuration
-- **Request batching**: Minimize API calls to Apify
-- **Memory efficiency**: No unnecessary data retention
+- **Request batching**: Minimize API calls to Apify and no unnecessary data retention
 
 ## 🛡️ **Security Considerations**
 
@@ -160,7 +156,7 @@ npm run client
 - **Type checking**: Runtime type validation for all user inputs
 - **Rate limiting**: Built-in delays to prevent API abuse
 
-## 🧪 **Testing the Application**
+## **Testing the Application**
 
 ### **Manual Testing Scenarios**
 
@@ -216,23 +212,16 @@ npm run client
 
 - **React + Vite**: Faster development cycles than Create React App, modern tooling
 - **Express.js**: Lightweight, flexible, excellent for API development
-- **Axios**: Superior error handling and request/response interceptors vs fetch
-- **Pure CSS**: No framework dependencies, full control over styling, better performance
 
 ### **Key Implementation Challenges Solved**
 
 1. **Schema Variability**: Apify stores schemas in different locations depending on creation method
 2. **Async Execution**: Long-running actors require intelligent polling strategies  
-3. **Form Generation**: Dynamic forms from JSON Schema with proper validation
-4. **Error Context**: Maintaining user context through error scenarios
 
 ## 🎓 **Learning Outcomes Demonstrated**
 
 - **Full-stack integration**: Seamless frontend-backend communication
-- **Third-party API mastery**: Complex integration with external service
 - **Dynamic UI generation**: Runtime form creation from schemas
-- **Real-time communication**: Polling strategies and status management
-- **Security awareness**: Safe handling of sensitive credentials
 - **User experience design**: Intuitive workflows and error handling
 
 ## 🔮 **Future Enhancements**
