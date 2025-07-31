@@ -3,25 +3,28 @@ const cors = require("cors");
 const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 5000;
-require("dotenv").config();
-const APIFY_API_BASE = "https://api.apify.com/v2";
 
+require("dotenv").config();
 app.use(cors());
 app.use(express.json());
 
-const makeRequest = async (endpoint, apiKey, meth = "GET", data = null) => {
-  try {
+const APIFY_API_BASE = "https://api.apify.com/v2";
+
+const makeApifyRequest = async (endpoint, apiKey, method = "GET", data = null) => {
+  try{
     const config = {
-      meth,
+      method,
       url: `${APIFY_API_BASE}${endpoint}`,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
     };
-    if (data) {
+
+    if(data){
       config.data = data;
     }
+
     const response = await axios(config);
     return { success: true, data: response.data };
   } 
@@ -35,7 +38,7 @@ const makeRequest = async (endpoint, apiKey, meth = "GET", data = null) => {
   }
 };
 
-//validate api and fetch actor
+// Route: Validate API key and fetch user's actors
 app.post("/api/actors", async (req, res) => {
   const { apiKey } = req.body;
 
@@ -43,13 +46,13 @@ app.post("/api/actors", async (req, res) => {
     return res.status(400).json({ error: "API key is required" });
   }
 
-  const result = await makeRequest("/acts", apiKey);
+  const result = await makeApifyRequest("/acts", apiKey);
 
   if (!result.success) {
     return res.status(result.status).json({ error: result.error });
   }
 
-  
+  // Filter to only return essential actor information
   const actors = result.data.data.items.map((actor) => ({
     id: actor.id,
     name: actor.name,
@@ -61,7 +64,7 @@ app.post("/api/actors", async (req, res) => {
   res.json({ actors });
 });
 
-//actor schema
+//Get actor input schema
 app.post("/api/actors/:actorId/schema", async (req, res) => {
   const { actorId } = req.params;
   const { apiKey } = req.body;
@@ -70,14 +73,27 @@ app.post("/api/actors/:actorId/schema", async (req, res) => {
     return res.status(400).json({ error: "API key is required" });
   }
 
-  const result = await makeRequest(`/acts/${actorId}`, apiKey);
+  const result = await makeApifyRequest(`/acts/${actorId}`, apiKey);
 
   if (!result.success) {
     return res.status(result.status).json({ error: result.error });
   }
 
   const actor = result.data.data;
-  const inputSchema = actor.defaultRunOptions?.build?.inputSchema || {};
+
+  let inputSchema = {};
+  if (actor.defaultRunOptions?.build?.inputSchema) {
+    inputSchema = actor.defaultRunOptions.build.inputSchema;
+  } else if (actor.versions && actor.versions.length > 0) {
+    const latestVersion = actor.versions[0];
+    if (latestVersion.inputSchema) {
+      inputSchema = latestVersion.inputSchema;
+    }
+  } else if (actor.inputSchema) {
+    inputSchema = actor.inputSchema;
+  }
+
+  console.log("Actor schema found:", JSON.stringify(inputSchema, null, 2));
 
   res.json({
     schema: inputSchema,
@@ -89,7 +105,7 @@ app.post("/api/actors/:actorId/schema", async (req, res) => {
   });
 });
 
-//execute
+//Execute actor run
 app.post("/api/actors/:actorId/run", async (req, res) => {
   const { actorId } = req.params;
   const { apiKey, input } = req.body;
@@ -97,9 +113,7 @@ app.post("/api/actors/:actorId/run", async (req, res) => {
   if (!apiKey) {
     return res.status(400).json({ error: "API key is required" });
   }
-
-
-  const runResult = await makeRequest(`/acts/${actorId}/runs`, apiKey, "POST", input || {});
+  const runResult = await makeApifyRequest(`/acts/${actorId}/runs`, apiKey, "POST", input || {})
 
   if (!runResult.success) {
     return res.status(runResult.status).json({ error: runResult.error });
@@ -107,14 +121,14 @@ app.post("/api/actors/:actorId/run", async (req, res) => {
 
   const runId = runResult.data.data.id;
 
-  
-  const maxAttempts = 60; 
-  const pollInterval = 5000;
+  //Poll
+  const maxAttempts = 60; // 5 minutes max
+  const pollInterval = 5000; // 5 seconds
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
-    const statusResult = await makeRequest(`/acts/${actorId}/runs/${runId}`, apiKey);
+    const statusResult = await makeApifyRequest(`/acts/${actorId}/runs/${runId}`, apiKey);
 
     if (!statusResult.success) {
       return res
@@ -125,7 +139,8 @@ app.post("/api/actors/:actorId/run", async (req, res) => {
     const run = statusResult.data.data;
 
     if (run.status === "SUCCEEDED") {
-      const datasetResult = await makeRequest(`/datasets/${run.defaultDatasetId}/items`, apiKey);
+      // Fetch the dataset results
+      const datasetResult = await makeApifyRequest(`/datasets/${run.defaultDatasetId}/items`, apiKey);
 
       if (!datasetResult.success) {
         return res.json({
@@ -157,6 +172,8 @@ app.post("/api/actors/:actorId/run", async (req, res) => {
         stats: run.stats,
       });
     }
+
+    // continue polling
     if (attempt === 0) {
       res.writeHead(200, {
         "Content-Type": "application/json",
@@ -171,6 +188,8 @@ app.post("/api/actors/:actorId/run", async (req, res) => {
       );
     }
   }
+
+  //timeout
   return res.json({
     status: "TIMEOUT",
     runId,

@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
-import './App.css'
-import axios from 'axios'
+import React, { useState } from "react";
+import axios from "axios";
+import "./App.css";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 function App() {
@@ -14,8 +13,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
-  const [step, setStep] = useState("auth");
+  const [step, setStep] = useState("auth"); // auth, actors, schema, execute, results
 
+  // Step 1: Authenticate and fetch actors
   const handleAuthenticate = async (e) => {
     e.preventDefault();
     if (!apiKey.trim()) {
@@ -39,6 +39,7 @@ function App() {
     }
   };
 
+  // Step 2: Select actor and fetch schema
   const handleSelectActor = async (actor) => {
     setLoading(true);
     setError("");
@@ -52,13 +53,20 @@ function App() {
       setSchema(response.data.schema);
       setInput({});
       setStep("schema");
+
+      console.log("Schema received:", response.data.schema);
     } catch (err) {
+      console.error("Schema fetch error:", err);
       setError(err.response?.data?.error || "Failed to fetch actor schema");
+      // Still proceed to schema step even if schema fetch fails
+      setSchema({});
+      setStep("schema");
     } finally {
       setLoading(false);
     }
   };
 
+  // Step 3: Execute actor
   const handleExecute = async () => {
     setLoading(true);
     setError("");
@@ -82,12 +90,28 @@ function App() {
     }
   };
 
+  // Render input field based on schema property
   const renderInputField = (key, property) => {
-    const value = input[key] || "";
+    const value =
+      input[key] || (property.default !== undefined ? property.default : "");
 
     const handleChange = (newValue) => {
       setInput((prev) => ({ ...prev, [key]: newValue }));
     };
+
+    // Handle enum/select properties
+    if (property.enum && Array.isArray(property.enum)) {
+      return (
+        <select value={value} onChange={(e) => handleChange(e.target.value)}>
+          <option value="">-- Select an option --</option>
+          {property.enum.map((option, index) => (
+            <option key={option} value={option}>
+              {property.enumTitles?.[index] || option}
+            </option>
+          ))}
+        </select>
+      );
+    }
 
     switch (property.type) {
       case "boolean":
@@ -95,7 +119,7 @@ function App() {
           <label className="checkbox-container">
             <input
               type="checkbox"
-              checked={value}
+              checked={value === true}
               onChange={(e) => handleChange(e.target.checked)}
             />
             {property.title || key}
@@ -103,26 +127,49 @@ function App() {
         );
 
       case "integer":
+        return (
+          <input
+            type="number"
+            value={value}
+            onChange={(e) => handleChange(parseInt(e.target.value, 10) || 0)}
+            placeholder={property.description}
+            step={1}
+            min={property.minimum}
+            max={property.maximum}
+          />
+        );
+
       case "number":
         return (
           <input
             type="number"
             value={value}
-            onChange={(e) => handleChange(Number(e.target.value))}
+            onChange={(e) => handleChange(parseFloat(e.target.value) || 0)}
             placeholder={property.description}
-            step={property.type === "integer" ? 1 : 0.01}
+            step={0.01}
+            min={property.minimum}
+            max={property.maximum}
           />
         );
 
       case "array":
+        const arrayValue = Array.isArray(value)
+          ? value.join("\n")
+          : value || "";
         return (
           <textarea
-            value={Array.isArray(value) ? value.join("\n") : value}
-            onChange={(e) =>
-              handleChange(e.target.value.split("\n").filter(Boolean))
-            }
-            placeholder={`${property.description || "Enter one item per line"}`}
-            rows={4}
+            value={arrayValue}
+            onChange={(e) => {
+              const lines = e.target.value
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean);
+              handleChange(lines);
+            }}
+            placeholder={`${
+              property.description || "Enter one item per line"
+            }\n\nExample:\nhttps://example.com\nhttps://google.com`}
+            rows={6}
           />
         );
 
@@ -147,7 +194,6 @@ function App() {
     setResult(null);
     setError("");
   };
-
 
   return (
     <div className="app">
@@ -242,7 +288,7 @@ function App() {
               </button>
             </div>
 
-            {schema && schema.properties ? (
+            {schema && Object.keys(schema).length > 0 && schema.properties ? (
               <div className="schema-form">
                 <div className="form-fields">
                   {Object.entries(schema.properties).map(([key, property]) => (
@@ -274,10 +320,23 @@ function App() {
                 </div>
               </div>
             ) : (
-              <p className="no-schema">
-                This actor doesn't have a defined input schema. You can still
-                execute it with default settings.
-              </p>
+              <div className="no-schema-section">
+                <p className="no-schema">
+                  This actor doesn't have a defined input schema, but you can
+                  still execute it with default settings.
+                </p>
+                <div className="form-actions">
+                  <button
+                    onClick={handleExecute}
+                    disabled={loading}
+                    className="primary-button execute-button"
+                  >
+                    {loading
+                      ? "Executing..."
+                      : "🚀 Execute Actor (Default Settings)"}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -365,4 +424,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
