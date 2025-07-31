@@ -202,6 +202,14 @@ npm run client
 - **Enhanced feedback**: Real-time status updates and progress indicators
 - **Accessibility**: Proper focus management and keyboard navigation
 
+
+## 📸 **Screenshots**
+
+<img width="1913" height="862" alt="Screenshot 2025-07-31 223759" src="https://github.com/user-attachments/assets/e4d21f65-bd13-40db-8c39-f645db72613b" />
+<img width="1906" height="1325" alt="localhost_3000_ (2)" src="https://github.com/user-attachments/assets/9feaed61-9815-4ecc-a180-1ca3b174b750" />
+<img width="1906" height="1034" alt="localhost_3000_ (1)" src="https://github.com/user-attachments/assets/04779711-672c-4baa-83f6-0865a2f3134b" />
+<img width="1906" height="2005" alt="localhost_3000_" src="https://github.com/user-attachments/assets/448df04a-87b6-41ac-be76-67773a54ca31" />
+
 ## 📝 **Development Notes**
 
 ### **Why These Technology Choices?**
